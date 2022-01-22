@@ -1,0 +1,10 @@
+COPY drivers from '/home/snake/Desktop/DBMS/Assignment1_Design/drivers.csv' DELIMITER ',' CSV HEADER;
+COPY circuits from '/home/snake/Desktop/DBMS/Assignment1_Design/circuits.csv' DELIMITER ',' CSV HEADER;
+COPY constructors from '/home/snake/Desktop/DBMS/Assignment1_Design/constructors.csv' DELIMITER ',' CSV HEADER;
+COPY status from '/home/snake/Desktop/DBMS/Assignment1_Design/status.csv' DELIMITER ',' CSV HEADER;
+COPY races from '/home/snake/Desktop/DBMS/Assignment1_Design/races.csv' DELIMITER ',' CSV HEADER;
+COPY pitStops from '/home/snake/Desktop/DBMS/Assignment1_Design/pit_stops.csv' DELIMITER ',' CSV HEADER;
+COPY lapTimes from '/home/snake/Desktop/DBMS/Assignment1_Design/lap_times.csv' DELIMITER ',' CSV HEADER;
+COPY qualifying from '/home/snake/Desktop/DBMS/Assignment1_Design/qualifying.csv' DELIMITER ',' CSV HEADER;
+COPY results from '/home/snake/Desktop/DBMS/Assignment1_Design/results.csv' DELIMITER ',' CSV HEADER;
+COPY constructorResults from '/home/snake/Desktop/DBMS/Assignment1_Design/constructor_results.csv' DELIMITER ',' CSV HEADER;
