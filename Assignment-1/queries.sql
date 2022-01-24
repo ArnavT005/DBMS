@@ -1,5 +1,5 @@
-SELECT *
-FROM (
+--1--
+WITH temp1 AS (
     SELECT driverId AS driverid, forename, surname, nationality, milliseconds AS time
     FROM (
         SELECT driverId, forename, surname, nationality, milliseconds, circuitId
@@ -17,83 +17,73 @@ FROM (
         R2.circuitId = circuits.circuitId AND
         country = 'Monaco'
     )
-) AS R3
+)
+SELECT *
+FROM temp1
 WHERE (
-    R3.time = (
+    temp1.time = (
         SELECT MAX(time)
-        FROM (
-            SELECT driverId, forename, surname, nationality, milliseconds AS time
-            FROM (
-                SELECT driverId, forename, surname, nationality, milliseconds, circuitId
-                FROM (
-                    SELECT DISTINCT drivers.driverId AS driverId, forename, surname, nationality, raceId, milliseconds
-                    FROM drivers, lapTimes
-                    WHERE drivers.driverId = lapTimes.driverId
-                ) AS R1, races
-                WHERE (
-                    R1.raceId = races.raceId AND
-                    year = 2017
-                )
-            ) AS R2, circuits
-            WHERE (
-                R2.circuitId = circuits.circuitId AND
-                country = 'Monaco'
-            )
-        ) as R4
+        FROM temp1
     )
 )
 ORDER BY forename, surname, nationality;
-
-
-SELECT name AS constructor_name, R2.constructorId AS constructorid, nationality, points
-FROM (
-    SELECT constructorId, SUM(points) AS points
-    FROM (
-        SELECT constructorId, points
-        FROM constructorResults, races
-        WHERE (
-            constructorResults.raceId = races.raceId AND
-            year = 2012
-        )
-    ) AS R1
-    GROUP BY constructorId
-) AS R2, constructors
-WHERE R2.constructorId = constructors.constructorId
-ORDER BY points DESC, constructor_name, nationality, constructorid
-LIMIT 5;
-
-SELECT R1.driverId AS driverid, forename, surname, points
-FROM (
-    SELECT driverId, SUM(points) AS points
-    FROM results, races
-    WHERE (
-        results.raceId = races.raceId AND
-        year > 2000 AND
-        year < 2021
-    )
-    GROUP BY driverId
-) AS R1, drivers
-WHERE R1.driverId = drivers.driverId
-ORDER BY points DESC, forename, surname, driverid
-LIMIT 1;
-
-SELECT R1.constructorId AS constructorid, name, nationality, points
+--2--
+SELECT name AS constructor_name, R1.constructorId AS constructorid, nationality, points
 FROM (
     SELECT constructorId, SUM(points) AS points
     FROM constructorResults, races
     WHERE (
         constructorResults.raceId = races.raceId AND
-        year > 2009 AND
-        year < 2021
+        year = 2012
     )
     GROUP BY constructorId
+
 ) AS R1, constructors
 WHERE R1.constructorId = constructors.constructorId
-ORDER BY points DESC, name, nationality, constructorid
-LIMIT 1;
-
-SELECT R1.driverid AS driverid, forename, surname, race_wins
-FROM (
+ORDER BY points DESC, constructor_name, nationality, constructorid
+LIMIT 5;
+--3--
+WITH temp1 AS (
+    SELECT driverId, SUM(points) AS points
+    FROM results, races
+    WHERE (
+        results.raceId = races.raceId AND
+        year > 2000 AND year < 2021
+    )
+    GROUP BY driverId
+)
+SELECT temp1.driverId AS driverid, forename, surname, points
+FROM temp1, drivers
+WHERE (
+    temp1.driverId = drivers.driverId AND
+    temp1.points = (
+        SELECT MAX(points)
+        FROM temp1
+    )
+)
+ORDER BY forename, surname, driverid;
+--4--
+WITH temp1 AS (
+    SELECT constructorId, SUM(points) AS points
+    FROM constructorResults, races
+    WHERE (
+        constructorResults.raceId = races.raceId AND
+        year > 2009 AND year < 2021
+    )
+    GROUP BY constructorId
+)
+SELECT temp1.constructorId AS constructorid, name, nationality, points
+FROM temp1, constructors
+WHERE (
+    temp1.constructorId = constructors.constructorId AND
+    temp1.points = (
+        SELECT MAX(points)
+        FROM temp1
+    )
+)
+ORDER BY name, nationality, constructorid;
+--5--
+WITH temp1 AS (
     SELECT drivers.driverId AS driverid, COUNT(drivers.driverId) AS race_wins
     FROM drivers, results
     WHERE (
@@ -101,11 +91,18 @@ FROM (
         positionOrder = 1
     )
     GROUP BY drivers.driverId
-) AS R1, drivers
-WHERE R1.driverid = drivers.driverid
-ORDER BY race_wins DESC, forename, surname, driverid
-LIMIT 1;
-
+)
+SELECT temp1.driverid AS driverid, forename, surname, race_wins
+FROM temp1, drivers
+WHERE (
+    temp1.driverid = drivers.driverid AND
+    temp1.race_wins = (
+        SELECT MAX(race_wins)
+        FROM temp1
+    )
+)
+ORDER BY forename, surname, driverid;
+--6--
 SELECT R2.constructorId AS constructorid, name, num_wins
 FROM (
     SELECT constructorId, COUNT(constructorId) AS num_wins
