@@ -103,8 +103,7 @@ WHERE (
 )
 ORDER BY forename, surname, driverid;
 --6--
-SELECT R2.constructorId AS constructorid, name, num_wins
-FROM (
+WITH temp1 AS (
     SELECT constructorId, COUNT(constructorId) AS num_wins
     FROM (
         SELECT raceId, MAX(points) AS points
@@ -116,49 +115,50 @@ FROM (
         constructorResults.points = R1.points
     )
     GROUP BY constructorId
-) AS R2, constructors
-WHERE R2.constructorId = constructors.constructorId
-ORDER BY num_wins DESC, name, constructorid
-LIMIT 1;
-
-
-SELECT R4.driverId as driverid, forename, surname, points
+)
+SELECT temp1.constructorId AS constructorid, name, num_wins
+FROM temp1, constructors
+WHERE (
+    temp1.constructorId = constructors.constructorId AND
+    temp1.num_wins = (
+        SELECT MAX(num_wins)
+        FROM temp1
+    )
+)
+ORDER BY name, constructorid;
+--7--
+WITH temp1 AS (
+    SELECT year, driverId, SUM(points) AS points
+    FROM results, races
+    WHERE results.raceId = races.raceId
+    GROUP BY year, driverId
+)
+SELECT R2.driverId as driverid, forename, surname, points
 FROM (
     SELECT driverId, SUM(points) AS points
     FROM results
     WHERE (
         driverId NOT IN (
             SELECT driverId
-            FROM (
-                SELECT year, driverId, SUM(points) AS points
-                FROM results, races
-                WHERE results.raceId = races.raceId
-                GROUP BY year, driverId
-            ) AS R1, (
+            FROM temp1, (
                 SELECT year, MAX(points) as points
-                FROM (
-                    SELECT year, driverId, SUM(points) AS points
-                    FROM results, races
-                    WHERE results.raceId = races.raceId
-                    GROUP BY year, driverId
-                ) AS R2
+                FROM temp1
                 GROUP BY year
-            ) AS R3
+            ) AS R1
             WHERE (
-                R1.year = R3.year AND
-                R1.points = R3.points
+                temp1.year = R1.year AND
+                temp1.points = R1.points
             )
             GROUP BY driverId
         )
     )
     GROUP BY driverId
-) AS R4, drivers
-WHERE R4.driverId = drivers.driverId
+) AS R2, drivers
+WHERE R2.driverId = drivers.driverId
 ORDER BY points DESC, forename, surname, driverid
 LIMIT 3;
-
-SELECT R3.driverId as driverid, forename, surname, num_countries
-FROM drivers, (
+--8--
+WITH temp1 AS (
     SELECT driverId, COUNT(driverId) AS num_countries
     FROM (
         SELECT DISTINCT driverId, country
@@ -173,31 +173,18 @@ FROM drivers, (
         )
     ) AS R2
     GROUP BY driverId
-) AS R3
+)
+SELECT temp1.driverId as driverid, forename, surname, num_countries
+FROM temp1, drivers
 WHERE (
-    drivers.driverId = R3.driverId AND
+    drivers.driverId = temp1.driverId AND
     num_countries = (
         SELECT MAX(num_countries)
-        FROM (
-            SELECT driverId, COUNT(driverId) AS num_countries
-            FROM (
-                SELECT DISTINCT driverId, country
-                FROM results, (
-                    SELECT races.raceId AS raceId, country
-                    FROM races, circuits
-                    WHERE races.circuitId = circuits.circuitId
-                ) AS R1
-                WHERE (
-                    results.raceId = R1.raceId AND
-                    positionOrder = 1
-                )
-            ) AS R2
-            GROUP BY driverId
-        ) AS R3
+        FROM temp1
     )
 )
-ORDER BY num_countries DESC, forename, surname, driverid;
-
+ORDER BY forename, surname, driverid;
+--9--
 SELECT R1.driverId AS driverid, forename, surname, num_wins
 FROM drivers, (
     SELECT driverId, COUNT(driverId) AS num_wins
@@ -211,10 +198,9 @@ FROM drivers, (
 WHERE R1.driverId = drivers.driverId
 ORDER BY num_wins DESC, forename, surname, driverid
 LIMIT 3;
-
-SELECT *
-FROM (
-    SELECT R1.raceId AS raceid, num_stops, R1.driverId AS driverid, forename, surname, races.circuitId AS circuitid, circuits.name
+--10--
+WITH temp1 AS (
+    SELECT R1.raceId AS raceid, num_stops, R1.driverId AS driverid, forename, surname, races.circuitId AS circuitid, circuits.name AS name
     FROM races, drivers, circuits, (
         SELECT results.raceId as raceId, results.driverId AS driverId, COUNT(*) AS num_stops
         FROM results, pitStops
@@ -230,28 +216,13 @@ FROM (
         circuits.circuitId = races.circuitId AND 
         drivers.driverId = R1.driverId
     )
-) AS R2
+)
+SELECT *
+FROM temp1
 WHERE (
     R2.num_stops = (
         SELECT MAX(num_stops)
-        FROM (
-            SELECT R3.raceId AS raceid, num_stops, R3.driverId AS driverid, forename, surname, races.circuitId AS circuitid, circuits.name
-            FROM races, drivers, circuits, (
-                SELECT results.raceId as raceId, results.driverId AS driverId, COUNT(*) AS num_stops
-                FROM results, pitStops
-                WHERE (
-                    results.raceId = pitStops.raceId AND
-                    results.driverId = pitStops.driverId AND
-                    positionOrder = 1
-                )
-                GROUP BY results.raceId, results.driverId
-            ) AS R3
-            WHERE (
-                races.raceId = R3.raceId AND
-                circuits.circuitId = races.circuitId AND 
-                drivers.driverId = R3.driverId
-            )
-        ) AS R4
+        FROM temp1
     )
 )
 ORDER BY forename, surname, name, circuitid, driverid;
