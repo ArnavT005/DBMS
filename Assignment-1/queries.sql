@@ -1,20 +1,12 @@
 --1--
 WITH temp1 AS (
-    SELECT driverId AS driverid, forename, surname, nationality, milliseconds AS time
-    FROM (
-        SELECT driverId, forename, surname, nationality, milliseconds, circuitId
-        FROM (
-            SELECT DISTINCT drivers.driverId AS driverId, forename, surname, nationality, raceId, milliseconds
-            FROM drivers, lapTimes
-            WHERE drivers.driverId = lapTimes.driverId
-        ) AS R1, races
-        WHERE (
-            R1.raceId = races.raceId AND
-            year = 2017
-        )
-    ) AS R2, circuits
+    SELECT lapTimes.driverId AS driverid, forename, surname, nationality, milliseconds AS time
+    FROM drivers, lapTimes, races, circuits
     WHERE (
-        R2.circuitId = circuits.circuitId AND
+        lapTimes.driverId = drivers.driverId AND
+        lapTimes.raceId = races.raceId AND
+        races.circuitId = circuits.circuitId AND 
+        year = 2017 AND
         country = 'Monaco'
     )
 )
@@ -84,7 +76,7 @@ WHERE (
 ORDER BY name, nationality, constructorid;
 --5--
 WITH temp1 AS (
-    SELECT drivers.driverId AS driverid, COUNT(drivers.driverId) AS race_wins
+    SELECT drivers.driverId AS driverId, COUNT(drivers.driverId) AS race_wins
     FROM drivers, results
     WHERE (
         drivers.driverId = results.driverId AND
@@ -92,10 +84,10 @@ WITH temp1 AS (
     )
     GROUP BY drivers.driverId
 )
-SELECT temp1.driverid AS driverid, forename, surname, race_wins
+SELECT temp1.driverId AS driverid, forename, surname, race_wins
 FROM temp1, drivers
 WHERE (
-    temp1.driverid = drivers.driverid AND
+    temp1.driverId = drivers.driverId AND
     temp1.race_wins = (
         SELECT MAX(race_wins)
         FROM temp1
@@ -220,7 +212,7 @@ WITH temp1 AS (
 SELECT *
 FROM temp1
 WHERE (
-    R2.num_stops = (
+    temp1.num_stops = (
         SELECT MAX(num_stops)
         FROM temp1
     )
@@ -269,81 +261,93 @@ WHERE (
     )
 )
 ORDER BY forename, surname, driverid;
---13-- to be cleaned
-SELECT R11.year AS year, (points_1 - points_2) AS point_diff, constructorId_1, name_1 AS constructor1_name, constructorId_2, name_2 AS constructor2_name
-FROM (
-    SELECT R1.year AS year, R7.constructorId AS constructorId_2, name AS name_2, R1.points AS points_2
-    FROM (
-        SELECT R2.year AS year, MAX(R2.points) AS points
-        FROM (
-            SELECT year, constructorId, SUM(points) AS points
-            FROM races, constructorResults
-            WHERE races.raceId = constructorResults.raceId
-            GROUP BY year, constructorId
-        ) AS R2, (
-            SELECT R3.year as year, constructorId, R3.points AS points
-            FROM (
-                SELECT year, constructorId, SUM(points) AS points
-                FROM races, constructorResults
-                WHERE races.raceId = constructorResults.raceId
-                GROUP BY year, constructorId
-            ) AS R3, (
-                SELECT year, MAX(points) AS points
-                FROM (
-                    SELECT year, constructorId, SUM(points) AS points
-                    FROM races, constructorResults
-                    WHERE races.raceId = constructorResults.raceId
-                    GROUP BY year, constructorId
-                ) AS R4
-                GROUP BY year
-            ) AS R5
-            WHERE (
-                R3.year = R5.year AND
-                R3.points = R5.points
-            )
-        ) AS R6
-        WHERE (
-            R2.year = R6.year AND
-            NOT (R2.constructorId = R6.constructorId) 
-        )
-        GROUP BY R2.year
-    ) AS R1, (
-        SELECT year, constructorId, SUM(points) AS points
-        FROM races, constructorResults
-        WHERE races.raceId = constructorResults.raceId
-        GROUP BY year, constructorId
-    ) AS R7, constructors
-    WHERE (
-        constructors.constructorId = R7.constructorId AND
-        R1.year = R7.year AND
-        R1.points = R7.points
-    )
-) AS R11, (
-    SELECT R8.year as year, R8.constructorId AS constructorId_1, name AS name_1, R8.points AS points_1
-    FROM (
-        SELECT year, constructorId, SUM(points) AS points
-        FROM races, constructorResults
-        WHERE races.raceId = constructorResults.raceId
-        GROUP BY year, constructorId
-    ) AS R8, (
-        SELECT year, MAX(points) AS points
-        FROM (
-            SELECT year, constructorId, SUM(points) AS points
-            FROM races, constructorResults
-            WHERE races.raceId = constructorResults.raceId
-            GROUP BY year, constructorId
-        ) AS R9
-        GROUP BY year
-    ) AS R10, constructors
-    WHERE (
-        R8.constructorId = constructors.constructorId AND
-        R8.year = R10.year AND
-        R8.points = R10.points
-    )
-) AS R12
-WHERE R11.year = R12.year
-ORDER BY point_diff DESC, constructor1_name, constructor2_name, constructorId_1, constructorId_2
-LIMIT 1;
+-- --13-- to be cleaned
+-- SELECT R11.year AS year, (points_1 - points_2) AS point_diff, constructorId_1, name_1 AS constructor1_name, constructorId_2, name_2 AS constructor2_name
+-- FROM (
+--     SELECT R1.year AS year, R7.constructorId AS constructorId_2, name AS name_2, R1.points AS points_2
+--     FROM (
+--         SELECT R2.year AS year, MAX(R2.points) AS points
+--         FROM (
+--             SELECT year, constructorId, SUM(points) AS points
+--             FROM races, constructorResults
+--             WHERE races.raceId = constructorResults.raceId
+--             GROUP BY year, constructorId
+--         ) AS R2, (
+--             SELECT R3.year as year, constructorId, R3.points AS points
+--             FROM (
+--                 SELECT year, constructorId, SUM(points) AS points
+--                 FROM races, constructorResults
+--                 WHERE races.raceId = constructorResults.raceId
+--                 GROUP BY year, constructorId
+--             ) AS R3, (
+--                 SELECT year, MAX(points) AS points
+--                 FROM (
+--                     SELECT year, constructorId, SUM(points) AS points
+--                     FROM races, constructorResults
+--                     WHERE races.raceId = constructorResults.raceId
+--                     GROUP BY year, constructorId
+--                 ) AS R4
+--                 GROUP BY year
+--             ) AS R5
+--             WHERE (
+--                 R3.year = R5.year AND
+--                 R3.points = R5.points
+--             )
+--         ) AS R6
+--         WHERE (
+--             R2.year = R6.year AND
+--             NOT (R2.constructorId = R6.constructorId) 
+--         )
+--         GROUP BY R2.year
+--     ) AS R1, (
+--         SELECT year, constructorId, SUM(points) AS points
+--         FROM races, constructorResults
+--         WHERE races.raceId = constructorResults.raceId
+--         GROUP BY year, constructorId
+--     ) AS R7, constructors
+--     WHERE (
+--         constructors.constructorId = R7.constructorId AND
+--         R1.year = R7.year AND
+--         R1.points = R7.points
+--     )
+-- ) AS R11, (
+--     SELECT R8.year as year, R8.constructorId AS constructorId_1, name AS name_1, R8.points AS points_1
+--     FROM (
+--         SELECT year, constructorId, SUM(points) AS points
+--         FROM races, constructorResults
+--         WHERE races.raceId = constructorResults.raceId
+--         GROUP BY year, constructorId
+--     ) AS R8, (
+--         SELECT year, MAX(points) AS points
+--         FROM (
+--             SELECT year, constructorId, SUM(points) AS points
+--             FROM races, constructorResults
+--             WHERE races.raceId = constructorResults.raceId
+--             GROUP BY year, constructorId
+--         ) AS R9
+--         GROUP BY year
+--     ) AS R10, constructors
+--     WHERE (
+--         R8.constructorId = constructors.constructorId AND
+--    WITH temp1 AS (
+--     SELECT driverId, SUM(points) AS points
+--     FROM results, races
+--     WHERE (
+--         results.raceId = races.raceId AND
+--         year > 2000 AND year < 2021
+--     )
+--     GROUP BY driverId
+-- )
+-- SELECT temp1.driverId AS driverid, forename, surname, points
+-- FROM temp1, drivers
+-- WHERE (
+--     temp1.driverId = drivers.driverId AND
+--     temp1.points = (
+--         SELECT MAX(points)
+--         FROM temp1
+--     )
+-- )
+-- ORDER BY forename, surname, driverid;
 --14--
 WITH temp1 AS (
     SELECT R1.driverId AS driverid, forename, surname, R1.circuitId AS circuitid, country, pos
@@ -377,7 +381,6 @@ WITH temp1 AS (
     WHERE (
         races.raceId = results.raceId AND
         year >= 2000 AND
-        year <= 2021 AND
         statusId = 5
     )
     GROUP BY constructorId
@@ -407,14 +410,19 @@ ORDER BY forename, surname, driverid
 LIMIT 5;
 --17--
 WITH temp1 AS (
-    SELECT constructorId, COUNT(*)
+    SELECT constructorId, COUNT(constructorId) AS count
     FROM (
-        SELECT raceId, constructorId, COUNT(*) AS count
-        FROM results
-        WHERE positionOrder <= 2
-        GROUP BY raceId, constructorId
+        SELECT results.raceId AS raceId, constructorId, COUNT(*) AS count
+        FROM results, races
+        WHERE (
+            results.raceId = races.raceId AND
+            positionOrder <= 2 AND
+            positionOrder > 0 AND
+            year >= 2014
+        )
+        GROUP BY results.raceId, constructorId
     ) AS R1
-    WHERE count = 2
+    WHERE R1.count = 2
     GROUP BY constructorId
 )
 SELECT temp1.constructorId AS constructorid, name, count
@@ -429,7 +437,7 @@ WHERE (
 ORDER BY name, constructorid;
 --18--
 WITH temp1 AS (
-    SELECT driverId, COUNT(*) AS num_laps
+    SELECT driverId, COUNT(driverId) AS num_laps
     FROM lapTimes
     WHERE position = 1
     GROUP BY driverId
@@ -446,9 +454,12 @@ WHERE (
 ORDER BY forename, surname, driverid;
 --19--
 WITH temp1 AS (
-    SELECT driverId, COUNT(*) AS count
+    SELECT driverId, COUNT(driverId) AS count
     FROM results
-    WHERE positionOrder <= 3
+    WHERE (
+        positionOrder <= 3 AND 
+        positionOrder > 0
+    )
     GROUP BY driverId
 )
 SELECT temp1.driverId AS driverid, forename, surname, count
@@ -470,7 +481,7 @@ WITH temp1 AS (
 )
 SELECT R2.driverId AS driverid, forename, surname, num_champs
 FROM (
-    SELECT temp1.driverId AS driverId, COUNT(*) AS num_champs
+    SELECT temp1.driverId AS driverId, COUNT(temp1.driverId) AS num_champs
     FROM temp1, (
         SELECT year, MAX(points) AS points
         FROM temp1
@@ -485,17 +496,3 @@ FROM (
 WHERE R2.driverId = drivers.driverId
 ORDER BY num_champs DESC, forename, surname DESC, driverid
 LIMIT 5;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
