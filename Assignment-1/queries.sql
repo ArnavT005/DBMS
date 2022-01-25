@@ -29,7 +29,6 @@ FROM (
         year = 2012
     )
     GROUP BY constructorId
-
 ) AS R1, constructors
 WHERE R1.constructorId = constructors.constructorId
 ORDER BY points DESC, constructor_name, nationality, constructorid
