@@ -1,0 +1,1 @@
+COPY train_info from '/home/snake/Desktop/DBMS/Assignment-2/train_info.csv' DELIMITER ',' CSV HEADER;
