@@ -17,7 +17,7 @@ set_comment() {
 # Test format and break into parts: part-1-25.sql
 # & generates a preamble.sql & cleanup.sql file
 rm vpl_execution
-python3 checker_without_individual_sql.py query.sql
+python3 checker_without_individual_sql.py 2019CS10424.sql
 
 if [ $? -ne 0 ]; then
     set_comment "File Invalid"

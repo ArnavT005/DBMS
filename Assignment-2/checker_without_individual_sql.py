@@ -11,7 +11,7 @@ import sys
 import os
 import re
 
-TOTAL_QUESTIONS = 20
+TOTAL_QUESTIONS = 22
 
 def err(*msg):
     print(*msg)
